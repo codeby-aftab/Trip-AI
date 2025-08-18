@@ -3,22 +3,24 @@ import React from 'react';
 const partners = [
     { 
         name: 'Skyscanner', 
-        logo: 'https://upload.wikimedia.org/wikipedia/commons/e/e4/Skyscanner_Wordmark_Lockup_White_RGB.svg',
-        url: 'https://www.skyscanner.net',
-        className: 'h-8'
+        domain: 'skyscanner.net'
     },
     { 
         name: 'Booking.com', 
-        logo: 'https://upload.wikimedia.org/wikipedia/commons/b/be/Booking.com_logo_white.svg',
-        url: 'https://www.booking.com',
-        className: 'h-10'
+        domain: 'booking.com'
     },
     { 
         name: 'TripAdvisor', 
-        logo: 'https://upload.wikimedia.org/wikipedia/commons/3/34/Tripadvisor_lockup_horizontal_on_dark.svg',
-        url: 'https://www.tripadvisor.com',
-        className: 'h-10'
+        domain: 'tripadvisor.com'
     },
+    {
+        name: 'Expedia',
+        domain: 'expedia.com'
+    },
+    {
+        name: 'Kayak',
+        domain: 'kayak.com'
+    }
 ];
 
 export const Footer: React.FC = () => {
@@ -26,17 +28,21 @@ export const Footer: React.FC = () => {
     <footer className="bg-gray-800 text-white py-12">
       <div className="container mx-auto px-4 text-center">
         <h3 className="text-xl font-semibold mb-6">Our Trusted Partners</h3>
-        <div className="flex justify-center items-center space-x-8 md:space-x-12 mb-8">
+        <div className="flex justify-center items-center flex-wrap gap-x-8 md:gap-x-12 gap-y-4 mb-8">
             {partners.map(partner => (
                 <a 
                     key={partner.name}
-                    href={partner.url}
+                    href={`https://${partner.domain}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Visit ${partner.name}`}
-                    className={`${partner.className} opacity-80 hover:opacity-100 transition-opacity`}
+                    className="h-12 transform transition-transform duration-300 ease-in-out hover:scale-110"
                 >
-                    <img src={partner.logo} alt={`${partner.name} logo`} className="h-full" />
+                    <img 
+                        src={`https://logo.clearbit.com/${partner.domain}`} 
+                        alt={`${partner.name} logo`} 
+                        className="h-full w-auto transition-all duration-300" 
+                    />
                 </a>
             ))}
         </div>

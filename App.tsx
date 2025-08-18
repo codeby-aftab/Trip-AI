@@ -176,7 +176,6 @@ const App: React.FC = () => {
           <>
             <HeroSection onGenerate={handleGenerateTrip} isLoading={isLoading} />
             <HowItWorks />
-            <Footer />
           </>
         );
       case 'RESULTS':
@@ -226,6 +225,8 @@ const App: React.FC = () => {
         onHomeClick={handleGoHome}
       />
       {renderView()}
+
+      <Footer />
 
       <AuthModal isOpen={!!authModal} onClose={() => setAuthModal(null)}>
         {authModal === 'LOGIN' && (
