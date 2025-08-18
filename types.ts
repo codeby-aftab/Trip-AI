@@ -27,9 +27,10 @@ export interface Activity {
 
 export interface Restaurant {
     name: string;
-    priceRange: string;
+    averagePrice: number;
     cuisine: string;
     bookingLink: string;
+    menuSuggestions: string[];
 }
 
 export interface TripPlan {
@@ -43,8 +44,8 @@ export interface TripPlan {
     activities: number;
     food: number;
   };
-  flight: Flight;
-  hotel: Hotel;
+  flights: Flight[];
+  hotels: Hotel[];
   activities: Activity[];
   restaurants: Restaurant[];
   groundingAttributions: GroundingAttribution[];

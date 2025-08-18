@@ -5,7 +5,11 @@ import { HotelIcon } from './icons/HotelIcon';
 import { CompassIcon } from './icons/CompassIcon';
 import { StarIcon } from './icons/StarIcon';
 import { RestaurantIcon } from './icons/RestaurantIcon';
+import { BookmarkIcon } from './icons/BookmarkIcon';
+import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
 import { formatCurrency } from '../utils/currency';
+import { getLogoUrl, getInitials } from '../utils/imageUtils';
+import { ImageWithFallback } from './ImageWithFallback';
 
 type Rates = { [key: string]: number };
 
@@ -14,7 +18,10 @@ interface ResultsPageProps {
   userBudget: number;
   currency: string;
   rates: Rates | null;
-  onBack: () => void;
+  isLoggedIn: boolean;
+  onSaveTrip: (plan: TripPlan) => void;
+  onRequestLogin: () => void;
+  onGoBack: () => void;
 }
 
 const Disclaimer: React.FC = () => (
@@ -23,7 +30,6 @@ const Disclaimer: React.FC = () => (
         <p>Please review and verify all details, including names, prices, and availability, on the booking sites before making any payments. This plan is a starting point for your adventure!</p>
     </div>
 );
-
 
 const ProgressBar: React.FC<{ breakdown: TripPlan['budgetBreakdown'] }> = ({ breakdown }) => (
     <div className="w-full bg-gray-200 rounded-full h-4 my-2 flex overflow-hidden">
@@ -34,28 +40,58 @@ const ProgressBar: React.FC<{ breakdown: TripPlan['budgetBreakdown'] }> = ({ bre
     </div>
 );
 
-const FlightCard: React.FC<{ flight: Flight; currency: string; rates: Rates | null }> = ({ flight, currency, rates }) => (
-    <div className="p-4 bg-white rounded-lg flex justify-between items-center shadow-md border border-gray-100">
-        <div>
+const BookingAction: React.FC<{ link: string; isLoggedIn: boolean; onRequestLogin: () => void; text: string; ctaText: string, className: string; }> = ({ link, isLoggedIn, onRequestLogin, text, ctaText, className }) => {
+    if (isLoggedIn) {
+        return (
+            <a href={link} target="_blank" rel="noopener noreferrer" className={className}>
+                {text}
+            </a>
+        );
+    }
+    return (
+        <button onClick={onRequestLogin} className={`${className} bg-gray-200 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-300`}>
+            {ctaText}
+        </button>
+    );
+};
+
+
+const FlightCard: React.FC<{ flight: Flight; currency: string; rates: Rates | null; isLoggedIn: boolean; onRequestLogin: () => void; }> = ({ flight, currency, rates, isLoggedIn, onRequestLogin }) => (
+    <div className="p-4 bg-white rounded-lg flex items-center shadow-md border border-gray-100 space-x-4">
+        <ImageWithFallback
+            src={getLogoUrl(flight.airline)}
+            alt={`${flight.airline} logo`}
+            fallbackText={getInitials(flight.airline)}
+            className="w-12 h-12 object-contain rounded-md flex-shrink-0"
+            fallbackClassName="bg-gray-100 text-gray-500"
+        />
+        <div className="flex-grow">
             <p className="font-semibold text-lg text-gray-800">{flight.airline}</p>
             <p className="text-sm text-gray-600">{flight.description}</p>
         </div>
-        <div className="text-right">
+        <div className="text-right flex-shrink-0">
             <p className="font-bold text-xl text-sky-700">{formatCurrency(flight.price, currency, rates)}</p>
-            <a href={flight.bookingLink} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-sky-600 hover:underline">Book Now</a>
+            <BookingAction 
+                link={flight.bookingLink} 
+                isLoggedIn={isLoggedIn} 
+                onRequestLogin={onRequestLogin} 
+                text="Book Now"
+                ctaText="Log in to Book"
+                className="text-sm font-medium text-sky-600 hover:underline"
+            />
         </div>
     </div>
 );
 
-const HotelCard: React.FC<{ hotel: Hotel; destination: string; currency: string; rates: Rates | null }> = ({ hotel, destination, currency, rates }) => {
-    const imageUrl = `https://source.unsplash.com/400x400/?${encodeURIComponent(`${hotel.name},${destination}`)}`;
+const HotelCard: React.FC<{ hotel: Hotel; destination: string; currency: string; rates: Rates | null; isLoggedIn: boolean; onRequestLogin: () => void; }> = ({ hotel, destination, currency, rates, isLoggedIn, onRequestLogin }) => {
     return (
         <div className="p-4 bg-white rounded-lg flex items-center space-x-4 shadow-md border border-gray-100">
-            <img 
-                src={imageUrl} 
-                alt={hotel.name} 
-                className="w-24 h-24 object-cover rounded-md flex-shrink-0 bg-gray-200" 
-                onError={(e) => (e.currentTarget.style.display = 'none')}
+            <ImageWithFallback
+                src={getLogoUrl(hotel.name)}
+                alt={`${hotel.name} logo`}
+                fallbackText={getInitials(hotel.name)}
+                className="w-24 h-24 object-contain rounded-md flex-shrink-0"
+                fallbackClassName="bg-gray-100 text-gray-500 text-3xl"
             />
             <div className="flex-grow">
                 <h4 className="font-semibold text-lg text-gray-800">{hotel.name}</h4>
@@ -69,61 +105,112 @@ const HotelCard: React.FC<{ hotel: Hotel; destination: string; currency: string;
             <div className="text-right flex-shrink-0">
                 <p className="font-bold text-xl text-teal-700">{formatCurrency(hotel.price, currency, rates)}</p>
                 <p className="text-xs text-gray-500 -mt-1">total for 5 nights</p>
-                <a href={hotel.bookingLink} target="_blank" rel="noopener noreferrer" className="text-sm mt-2 inline-block font-medium text-teal-600 hover:underline">Book Now</a>
+                <div className="mt-2">
+                    <BookingAction 
+                        link={hotel.bookingLink} 
+                        isLoggedIn={isLoggedIn} 
+                        onRequestLogin={onRequestLogin} 
+                        text="Book Now"
+                        ctaText="Log in to Book"
+                        className="text-sm font-medium text-teal-600 hover:underline"
+                    />
+                </div>
             </div>
         </div>
     );
 };
 
 
-const ActivityCard: React.FC<{ activity: Activity; destination: string; currency: string; rates: Rates | null }> = ({ activity, destination, currency, rates }) => {
+const ActivityCard: React.FC<{ activity: Activity; destination: string; currency: string; rates: Rates | null; isLoggedIn: boolean; onRequestLogin: () => void; }> = ({ activity, destination, currency, rates, isLoggedIn, onRequestLogin }) => {
     const imageUrl = `https://source.unsplash.com/400x300/?${encodeURIComponent(`${activity.name},${destination}`)}`;
     return (
         <div className="p-4 bg-white rounded-lg flex flex-col h-full shadow-md border border-gray-100">
-             <img 
-                src={imageUrl} 
-                alt={activity.name} 
-                className="w-full h-32 object-cover rounded-md flex-shrink-0 bg-gray-200" 
-                loading="lazy"
-                onError={(e) => (e.currentTarget.style.display = 'none')}
+             <ImageWithFallback
+                src={imageUrl}
+                alt={activity.name}
+                fallbackText={getInitials(activity.name)}
+                className="w-full h-32 object-cover rounded-md flex-shrink-0"
+                fallbackClassName="text-3xl"
             />
             <div className="flex-grow mt-3">
                 <h4 className="font-semibold text-gray-800">{activity.name}</h4>
                 <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
             </div>
             <div className="text-right mt-3">
-                <p className="font-bold text-lg text-orange-700">{formatCurrency(activity.price, currency, rates)}</p>
-                <a href={activity.bookingLink} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-orange-600 hover:underline">Book Now</a>
+                {activity.price > 0 ? (
+                    <>
+                        <p className="font-bold text-lg text-orange-700">{formatCurrency(activity.price, currency, rates)}</p>
+                        <BookingAction 
+                            link={activity.bookingLink} 
+                            isLoggedIn={isLoggedIn} 
+                            onRequestLogin={onRequestLogin} 
+                            text="Book Now"
+                            ctaText="Log in to Book"
+                            className="text-sm font-medium text-orange-600 hover:underline"
+                        />
+                    </>
+                ) : (
+                    <>
+                        <p className="font-bold text-lg text-green-600">Free</p>
+                        {activity.bookingLink && (
+                             <BookingAction 
+                                link={activity.bookingLink} 
+                                isLoggedIn={isLoggedIn} 
+                                onRequestLogin={onRequestLogin} 
+                                text="More Info"
+                                ctaText="Log in for Info"
+                                className="text-sm font-medium text-orange-600 hover:underline"
+                            />
+                        )}
+                    </>
+                )}
             </div>
         </div>
     );
 };
 
-const RestaurantCard: React.FC<{ restaurant: Restaurant; destination: string; }> = ({ restaurant, destination }) => {
+const RestaurantCard: React.FC<{ restaurant: Restaurant; destination: string; currency: string; rates: Rates | null; isLoggedIn: boolean; onRequestLogin: () => void; }> = ({ restaurant, destination, currency, rates, isLoggedIn, onRequestLogin }) => {
     const imageUrl = `https://source.unsplash.com/400x400/?${encodeURIComponent(`${restaurant.cuisine} food,${restaurant.name}`)}`;
     return (
-        <div className="p-4 bg-white rounded-lg flex items-center space-x-4 shadow-md border border-gray-100">
-            <img 
-                src={imageUrl} 
-                alt={restaurant.name} 
-                className="w-16 h-16 object-cover rounded-md flex-shrink-0 bg-gray-200" 
-                loading="lazy" 
-                onError={(e) => (e.currentTarget.style.display = 'none')}
+        <div className="p-4 bg-white rounded-lg flex items-start space-x-4 shadow-md border border-gray-100">
+            <ImageWithFallback
+                src={imageUrl}
+                alt={restaurant.name}
+                fallbackText={getInitials(restaurant.name)}
+                className="w-16 h-16 object-cover rounded-md flex-shrink-0"
             />
             <div className="flex-grow">
                 <h4 className="font-semibold text-gray-800">{restaurant.name}</h4>
                 <p className="text-sm text-gray-600">{restaurant.cuisine}</p>
+                {(restaurant.menuSuggestions?.length || 0) > 0 && (
+                    <div className="mt-2">
+                        <p className="text-xs font-semibold text-gray-500">Suggestions:</p>
+                        <ul className="text-xs text-gray-500 list-disc list-inside">
+                            {restaurant.menuSuggestions.map(item => <li key={item}>{item}</li>)}
+                        </ul>
+                    </div>
+                )}
             </div>
             <div className="text-right flex-shrink-0">
-                <p className="font-bold text-lg text-yellow-700">{restaurant.priceRange}</p>
-                <a href={restaurant.bookingLink} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-yellow-600 hover:underline">View / Reserve</a>
+                 <p className="font-bold text-lg text-yellow-700">{formatCurrency(restaurant.averagePrice, currency, rates)}</p>
+                 <p className="text-xs text-gray-500 -mt-1">avg. per person</p>
+                <div className="mt-2">
+                    <BookingAction 
+                        link={restaurant.bookingLink} 
+                        isLoggedIn={isLoggedIn} 
+                        onRequestLogin={onRequestLogin} 
+                        text="View / Reserve"
+                        ctaText="Log in to Book"
+                        className="text-sm font-medium text-yellow-600 hover:underline"
+                    />
+                </div>
             </div>
         </div>
     );
 };
 
 
-export const ResultsPage: React.FC<ResultsPageProps> = ({ plans, userBudget, currency, rates, onBack }) => {
+export const ResultsPage: React.FC<ResultsPageProps> = ({ plans, userBudget, currency, rates, isLoggedIn, onSaveTrip, onRequestLogin, onGoBack }) => {
     const [selectedPlanIndex, setSelectedPlanIndex] = useState(0);
     const [showSources, setShowSources] = useState(false);
     const selectedPlan = plans[selectedPlanIndex];
@@ -142,35 +229,46 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ plans, userBudget, cur
         return uniqueAttributions;
     }, [plans]);
 
-
     return (
         <div className="bg-gray-50 min-h-screen">
-            <header className="bg-white shadow-sm sticky top-0 z-20">
-                <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-                    <h1 className="text-xl md:text-2xl font-bold text-gray-800">Your Trip to {selectedPlan.destination}</h1>
-                    <button onClick={onBack} className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">
-                        Plan a New Trip
-                    </button>
-                </div>
-            </header>
-            
             <main className="container mx-auto p-4 md:p-8">
-                <Disclaimer />
-                {/* Tabs */}
-                <div className="mb-8 flex justify-center border-b border-gray-200">
-                    {plans.map((plan, index) => (
-                        <button 
-                            key={index} 
-                            onClick={() => setSelectedPlanIndex(index)}
-                            className={`px-4 py-3 text-sm md:text-base font-semibold transition-colors duration-200 focus:outline-none ${selectedPlanIndex === index ? 'border-b-2 border-cyan-500 text-cyan-600' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            {plan.planName}
-                        </button>
-                    ))}
+                <div className="relative text-center mb-6">
+                    <button 
+                        onClick={onGoBack}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+                        aria-label="Go back to new search"
+                    >
+                        <ArrowLeftIcon className="w-5 h-5 mr-2" />
+                        New Search
+                    </button>
+                    <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Your Trip to {selectedPlan.destination}</h1>
                 </div>
+                <Disclaimer />
+                {plans.length > 1 && (
+                  <div className="mb-8 flex justify-center border-b border-gray-200">
+                      {plans.map((plan, index) => (
+                          <button 
+                              key={index} 
+                              onClick={() => setSelectedPlanIndex(index)}
+                              className={`px-4 py-3 text-sm md:text-base font-semibold transition-colors duration-200 focus:outline-none ${selectedPlanIndex === index ? 'border-b-2 border-cyan-500 text-cyan-600' : 'text-gray-500 hover:text-gray-700'}`}
+                          >
+                              {plan.planName}
+                          </button>
+                      ))}
+                  </div>
+                )}
+
 
                 <div className="bg-white p-6 rounded-xl shadow-lg mb-8">
-                    <div className="pt-6 text-center">
+                    <div className="relative pt-6 text-center">
+                        <button 
+                            onClick={() => isLoggedIn ? onSaveTrip(selectedPlan) : onRequestLogin()}
+                            className="absolute top-0 right-0 flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                            title={isLoggedIn ? "Save this trip" : "Log in to save this trip"}
+                        >
+                            <BookmarkIcon className="w-4 h-4" />
+                            Save Trip
+                        </button>
                         <p className="text-gray-600">Total Estimated Cost</p>
                         <p className="text-5xl font-extrabold text-gray-900 my-2">{formatCurrency(selectedPlan.totalCost, currency, rates)}</p>
                         {selectedPlan.budgetBreakdown && <ProgressBar breakdown={selectedPlan.budgetBreakdown} />}
@@ -185,23 +283,31 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ plans, userBudget, cur
                 </div>
 
                 <div className="space-y-12">
-                    {selectedPlan.flight && (
+                    {(selectedPlan.flights?.length || 0) > 0 && (
                         <section>
-                            <h2 className="text-3xl font-bold mb-4 flex items-center text-gray-800"><AirplaneIcon className="w-7 h-7 mr-3 text-sky-600"/>Flight Details</h2>
-                            <FlightCard flight={selectedPlan.flight} currency={currency} rates={rates} />
+                            <h2 className="text-3xl font-bold mb-4 flex items-center text-gray-800"><AirplaneIcon className="w-7 h-7 mr-3 text-sky-600"/>Flight Options</h2>
+                            <div className="space-y-4">
+                                {selectedPlan.flights.map((flight, index) => (
+                                    <FlightCard key={index} flight={flight} currency={currency} rates={rates} isLoggedIn={isLoggedIn} onRequestLogin={onRequestLogin} />
+                                ))}
+                            </div>
                         </section>
                     )}
-                     {selectedPlan.hotel && (
+                     {(selectedPlan.hotels?.length || 0) > 0 && (
                         <section>
-                            <h2 className="text-3xl font-bold mb-4 flex items-center text-gray-800"><HotelIcon className="w-7 h-7 mr-3 text-teal-600"/>Accommodation (5 nights)</h2>
-                            <HotelCard hotel={selectedPlan.hotel} destination={selectedPlan.destination} currency={currency} rates={rates} />
+                            <h2 className="text-3xl font-bold mb-4 flex items-center text-gray-800"><HotelIcon className="w-7 h-7 mr-3 text-teal-600"/>Accommodation Options (5 nights)</h2>
+                            <div className="space-y-4">
+                                {selectedPlan.hotels.map((hotel, index) => (
+                                     <HotelCard key={index} hotel={hotel} destination={selectedPlan.destination} currency={currency} rates={rates} isLoggedIn={isLoggedIn} onRequestLogin={onRequestLogin} />
+                                ))}
+                            </div>
                         </section>
                      )}
                      {(selectedPlan.activities?.length || 0) > 0 && (
                         <section>
                             <h2 className="text-3xl font-bold mb-4 flex items-center text-gray-800"><CompassIcon className="w-7 h-7 mr-3 text-orange-600"/>Recommended Activities</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {selectedPlan.activities.map((activity, index) => <ActivityCard key={index} activity={activity} destination={selectedPlan.destination} currency={currency} rates={rates} />)}
+                                {selectedPlan.activities.map((activity, index) => <ActivityCard key={index} activity={activity} destination={selectedPlan.destination} currency={currency} rates={rates} isLoggedIn={isLoggedIn} onRequestLogin={onRequestLogin}/>)}
                             </div>
                         </section>
                      )}
@@ -209,7 +315,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ plans, userBudget, cur
                         <section>
                             <h2 className="text-3xl font-bold mb-4 flex items-center text-gray-800"><RestaurantIcon className="w-7 h-7 mr-3 text-yellow-600"/>Dining Recommendations</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {selectedPlan.restaurants.map((resto, index) => <RestaurantCard key={index} restaurant={resto} destination={selectedPlan.destination} />)}
+                                {selectedPlan.restaurants.map((resto, index) => <RestaurantCard key={index} restaurant={resto} destination={selectedPlan.destination} currency={currency} rates={rates} isLoggedIn={isLoggedIn} onRequestLogin={onRequestLogin} />)}
                             </div>
                         </section>
                      )}

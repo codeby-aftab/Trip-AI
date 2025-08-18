@@ -2,22 +2,34 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { HeroSection } from './components/HeroSection';
 import { HowItWorks } from './components/HowItWorks';
 import { Footer } from './components/Footer';
+import { Header } from './components/Header';
 import { ResultsPage } from './components/ResultsPage';
+import { SavedTripsPage } from './components/SavedTripsPage';
+import { AuthModal } from './components/AuthModal';
+import { LoginForm } from './components/LoginForm';
+import { SignupForm } from './components/SignupForm';
 import { generateTripPlan } from './services/geminiService';
 import { getExchangeRates } from './services/currencyService';
 import type { TripPlan } from './types';
 
-type View = 'HOME' | 'RESULTS';
+type View = 'HOME' | 'RESULTS' | 'SAVED_TRIPS';
+type AuthModalView = 'LOGIN' | 'SIGNUP';
 type Rates = { [key: string]: number };
+type UserProfile = { name: string; homeCity: string; };
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>('HOME');
-  const [tripPlans, setTripPlans] = useState<TripPlan[] | null>(null);
+  const [currentPlansForDisplay, setCurrentPlansForDisplay] = useState<TripPlan[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [userBudget, setUserBudget] = useState(2000);
   const [currency, setCurrency] = useState('USD');
   const [rates, setRates] = useState<Rates | null>(null);
+  
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [savedTrips, setSavedTrips] = useState<TripPlan[]>([]);
+  const [authModal, setAuthModal] = useState<AuthModalView | null>(null);
 
   useEffect(() => {
     const fetchRates = async () => {
@@ -30,6 +42,28 @@ const App: React.FC = () => {
       }
     };
     fetchRates();
+
+    try {
+        const loggedInStatus = localStorage.getItem('isLoggedIn');
+        if (loggedInStatus === 'true') {
+            setIsLoggedIn(true);
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                setUser(JSON.parse(storedUser));
+            }
+            const storedTrips = localStorage.getItem('savedTrips');
+            if (storedTrips) {
+                setSavedTrips(JSON.parse(storedTrips));
+            }
+        }
+    } catch (e) {
+        console.error("Failed to parse from localStorage", e);
+        // Clear broken storage
+        localStorage.clear();
+        setIsLoggedIn(false);
+        setUser(null);
+        setSavedTrips([]);
+    }
   }, []);
 
   const handleGenerateTrip = useCallback(async (origin: string, destination: string, budget: number, budgetCurrency: string) => {
@@ -54,7 +88,7 @@ const App: React.FC = () => {
 
     try {
       const plans = await generateTripPlan(origin, destination, budgetInUsd);
-      setTripPlans(plans);
+      setCurrentPlansForDisplay(plans);
       setView('RESULTS');
     } catch (err) {
       if (err instanceof Error) {
@@ -62,20 +96,71 @@ const App: React.FC = () => {
       } else {
         setError("An unknown error occurred.");
       }
-      // Stay on home page to show error
     } finally {
       setIsLoading(false);
     }
   }, [rates]);
 
-  const handleBackToHome = () => {
+  const handleLogin = (name?: string) => {
+    setIsLoggedIn(true);
+    localStorage.setItem('isLoggedIn', 'true');
+    // If it's a signup (name is provided), create a new user profile
+    if (name) {
+      const newUser = { name, homeCity: '' };
+      setUser(newUser);
+      localStorage.setItem('user', JSON.stringify(newUser));
+    }
+    setAuthModal(null);
+  };
+
+  const handleLogout = () => {
+      setIsLoggedIn(false);
+      setUser(null);
+      // Keep saved trips in case they log back in? For now, we clear everything.
+      setSavedTrips([]);
+      localStorage.clear();
+      if (view === 'SAVED_TRIPS') {
+          setView('HOME');
+      }
+  };
+  
+  const handleUpdateProfile = (updatedProfile: UserProfile) => {
+    setUser(updatedProfile);
+    localStorage.setItem('user', JSON.stringify(updatedProfile));
+  };
+  
+  const handleDeleteAccount = () => {
+    setIsLoggedIn(false);
+    setUser(null);
+    setSavedTrips([]);
+    localStorage.clear();
     setView('HOME');
-    setTripPlans(null);
-    // Do not clear the main error, as it might be a persistent one like failed rate fetch
+    alert("Your account has been successfully deleted.");
+  };
+
+  const handleSaveTrip = (planToSave: TripPlan) => {
+      if (savedTrips.some(trip => trip.planName === planToSave.planName && trip.destination === planToSave.destination && trip.totalCost === planToSave.totalCost)) {
+          alert("Trip already saved!");
+          return;
+      }
+      const newSavedTrips = [...savedTrips, planToSave];
+      setSavedTrips(newSavedTrips);
+      localStorage.setItem('savedTrips', JSON.stringify(newSavedTrips));
+      alert("Trip saved successfully!");
+  };
+
+  const handleViewSavedTrip = (trip: TripPlan) => {
+      setCurrentPlansForDisplay([trip]);
+      setView('RESULTS');
+  };
+
+  const handleGoHome = () => {
+    setView('HOME');
+    setCurrentPlansForDisplay(null);
   };
   
   const ErrorDisplay: React.FC<{ message: string }> = ({ message }) => (
-    <div className="fixed top-5 right-5 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg z-50" role="alert">
+    <div className="fixed top-24 right-5 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg z-50" role="alert">
       <strong className="font-bold">Error: </strong>
       <span className="block sm:inline">{message}</span>
       <span className="absolute top-0 bottom-0 right-0 px-4 py-3" onClick={() => setError(null)}>
@@ -83,19 +168,73 @@ const App: React.FC = () => {
       </span>
     </div>
   );
+  
+  const renderView = () => {
+    switch(view) {
+      case 'HOME':
+        return (
+          <>
+            <HeroSection onGenerate={handleGenerateTrip} isLoading={isLoading} />
+            <HowItWorks />
+            <Footer />
+          </>
+        );
+      case 'RESULTS':
+        return currentPlansForDisplay ? (
+          <main className="pt-20">
+            <ResultsPage 
+              plans={currentPlansForDisplay} 
+              userBudget={userBudget} 
+              currency={currency} 
+              rates={rates}
+              isLoggedIn={isLoggedIn}
+              onSaveTrip={handleSaveTrip}
+              onRequestLogin={() => setAuthModal('LOGIN')}
+              onGoBack={handleGoHome}
+            />
+          </main>
+        ) : null;
+      case 'SAVED_TRIPS':
+        return isLoggedIn && user ? (
+          <main className="pt-20">
+            <SavedTripsPage
+              user={user}
+              savedTrips={savedTrips}
+              onViewTrip={handleViewSavedTrip}
+              onUpdateProfile={handleUpdateProfile}
+              onDeleteAccount={handleDeleteAccount}
+              currency={currency}
+              rates={rates}
+            />
+          </main>
+        ) : null;
+      default:
+        return null;
+    }
+  }
 
   return (
     <div className="bg-white">
       {error && <ErrorDisplay message={error} />}
-      {view === 'HOME' ? (
-        <>
-          <HeroSection onGenerate={handleGenerateTrip} isLoading={isLoading} />
-          <HowItWorks />
-          <Footer />
-        </>
-      ) : tripPlans ? (
-        <ResultsPage plans={tripPlans} userBudget={userBudget} currency={currency} rates={rates} onBack={handleBackToHome} />
-      ) : null}
+       <Header
+        variant={view === 'HOME' ? 'transparent' : 'solid'}
+        isLoggedIn={isLoggedIn}
+        onLoginClick={() => setAuthModal('LOGIN')}
+        onSignupClick={() => setAuthModal('SIGNUP')}
+        onLogoutClick={handleLogout}
+        onMyTripsClick={() => setView('SAVED_TRIPS')}
+        onHomeClick={handleGoHome}
+      />
+      {renderView()}
+
+      <AuthModal isOpen={!!authModal} onClose={() => setAuthModal(null)}>
+        {authModal === 'LOGIN' && (
+          <LoginForm onLogin={() => handleLogin()} onSwitchToSignup={() => setAuthModal('SIGNUP')} />
+        )}
+        {authModal === 'SIGNUP' && (
+          <SignupForm onSignup={handleLogin} onSwitchToLogin={() => setAuthModal('LOGIN')} />
+        )}
+      </AuthModal>
     </div>
   );
 };

@@ -13,26 +13,28 @@ const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 export const generateTripPlan = async (origin: string, destination: string, budget: number): Promise<TripPlan[]> => {
   const prompt = `
-    You are an expert travel agent AI. Your task is to generate a comprehensive, realistic, and bookable 5-day travel itinerary from ${origin} to ${destination} with a target budget around $${Math.round(budget)} USD.
+    You are an expert travel agent AI. Your task is to generate a comprehensive, realistic, and bookable 5-day travel itinerary from ${origin} to ${destination}. The user has provided a target budget of $${Math.round(budget)} USD.
 
     CRITICAL INSTRUCTION: You MUST use Google Search to find real-time, accurate information for flights, hotels, activities, and restaurants. All generated information, especially business names, prices, and booking links, MUST be from the real-time search results. Do not invent or hallucinate any details. Verify business names exist at the destination.
 
-    Generate THREE distinct and complete trip plans in a JSON array. Each plan should cater to a different travel style but remain close to the user's budget. For example:
-    1.  'The Savvy Explorer': Focuses on the best value and budget-friendly options.
-    2.  'The Classic Journey': A balanced plan with popular sights and comfortable stays.
-    3.  'The Indulgent Escape': Features premium experiences, luxury hotels, or unique activities.
+    Generate THREE distinct trip plans in a JSON array, categorized as "Budget", "Moderate", and "Luxury".
+
+    1.  **Budget Plan**: This plan should focus on maximizing savings. Its 'totalCost' MUST be significantly LESS than the user's budget of $${Math.round(budget)}.
+    2.  **Moderate Plan**: This plan should offer a balance of cost and comfort. Its 'totalCost' should be close to, but MUST NOT exceed, the user's budget of $${Math.round(budget)}.
+    3.  **Luxury Plan**: This plan should feature premium and high-end experiences. Its 'totalCost' can exceed the user's budget to showcase what is possible with more funds, but should remain a realistic and aspirational option (e.g., 1.5x to 2.5x the user's budget).
+
 
     For EACH of the three plans, you must generate the following:
-    1.  A unique 'planName' (e.g., "The Savvy Explorer").
+    1.  A 'planName' that is exactly "Budget Plan", "Moderate Plan", or "Luxury Plan" respectively.
     2.  The 'destination'.
     3.  A total estimated 'totalCost' in USD.
     4.  A 'budgetBreakdown' as percentages for Flights, Hotels, Activities, and Food. The sum must be 100.
     5.  A short, enticing 'summary' for the trip package.
-    6.  A single recommended 'flight' object, including airline, price, bookingLink, and a short description.
-    7.  A single recommended 'hotel' object for a 5-night stay, including name, price, rating (1-5), bookingLink, and description. DO NOT provide a photoUrl.
-    8.  A list of 3-5 recommended 'activities', each with a name, description, price, and bookingLink. DO NOT provide a photoUrl.
-    9.  A list of 3-5 recommended 'restaurants', each with a name, cuisine, priceRange (e.g., $, $$, $$$), and bookingLink. DO NOT provide a photoUrl.
-    10. For every item (flight, hotel, activity, restaurant), provide a real booking link.
+    6.  A list of 2-3 recommended 'flights' in an array, each as an object including airline, price, bookingLink, and a short description. Provide varied options (e.g., budget, standard).
+    7.  A list of 2-3 recommended 'hotels' in an array for a 5-night stay, each as an object including name, price, rating (1-5), bookingLink, and description. Provide varied options (e.g., budget, mid-range). DO NOT provide a photoUrl.
+    8.  A list of 3-5 recommended 'activities', each with a name, description, price, and bookingLink. For activities that are free or open to the public (e.g., parks, walking tours), set the 'price' to 0. The 'bookingLink' for free activities can be a link to an official information page. DO NOT provide a photoUrl.
+    9.  A list of 3-5 recommended 'restaurants', each with a name, cuisine, an 'averagePrice' (number, estimated cost for a meal for one person in USD), a 'bookingLink', and a list of 2-3 'menuSuggestions' (strings, e.g., "Margherita Pizza", "Spaghetti Carbonara"). DO NOT provide a photoUrl.
+    10. For every item (flight, hotel, activity, restaurant), provide a real link. For paid items, it must be a booking link. For free items, it can be an informational link.
 
     You must respond ONLY with a single JSON object with a single key "tripPlans", which contains the array of the three plan objects. Do not include any introductory text, explanations, code block formatting (like \`\`\`json), or markdown. The JSON should be directly parsable.
   `;
@@ -75,6 +77,13 @@ export const generateTripPlan = async (origin: string, destination: string, budg
       destination: destination,
       groundingAttributions: attributions, // Attach all sources to each plan
     }));
+
+    // Ensure plans are sorted correctly: Budget, Moderate, Luxury
+    finalPlans.sort((a, b) => {
+        const order = ["Budget Plan", "Moderate Plan", "Luxury Plan"];
+        return order.indexOf(a.planName) - order.indexOf(b.planName);
+    });
+
 
     return finalPlans;
   } catch (error) {
