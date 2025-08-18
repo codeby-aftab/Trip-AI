@@ -1,0 +1,5 @@
+{
+  "name": "AI Trip Planner",
+  "description": "An AI-powered travel planner that instantly generates complete trip itineraries including flights, hotels, and activities based on your budget and destination.",
+  "requestFramePermissions": []
+}
