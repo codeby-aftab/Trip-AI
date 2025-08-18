@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { HERO_BACKGROUNDS, DESTINATION_SUGGESTIONS, SUPPORTED_CURRENCIES } from '../constants';
+import React, { useState } from 'react';
+import { DESTINATION_SUGGESTIONS, SUPPORTED_CURRENCIES } from '../constants';
 
 interface HeroSectionProps {
   onGenerate: (origin: string, destination: string, budget: number, currency: string) => void;
@@ -7,18 +7,10 @@ interface HeroSectionProps {
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onGenerate, isLoading }) => {
-  const [bgIndex, setBgIndex] = useState(0);
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [budget, setBudget] = useState(2000);
   const [currency, setCurrency] = useState('USD');
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setBgIndex((prevIndex) => (prevIndex + 1) % HERO_BACKGROUNDS.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,15 +19,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGenerate, isLoading 
     }
   };
 
+  const videoId = '0Wvi8Wb7z9c';
+  const videoSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&disablekb=1&start=10`;
+
   return (
     <div className="relative min-h-screen flex items-center justify-center text-white overflow-hidden">
-      {HERO_BACKGROUNDS.map((bg, index) => (
-        <div
-          key={bg}
-          className="absolute inset-0 w-full h-full bg-cover bg-center transition-opacity duration-1000"
-          style={{ backgroundImage: `url(${bg})`, opacity: index === bgIndex ? 1 : 0, transform: `scale(${index === bgIndex ? 1.05 : 1})`, transition: 'opacity 1s ease-in-out, transform 6s ease-in-out' }}
-        />
-      ))}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <iframe
+          className="absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 scale-150"
+          src={videoSrc}
+          title="Background Video"
+          frameBorder="0"
+          allow="autoplay; encrypted-media"
+        ></iframe>
+      </div>
       <div className="absolute inset-0 bg-black/50"></div>
 
       <div className="relative z-10 flex flex-col items-center text-center p-4">

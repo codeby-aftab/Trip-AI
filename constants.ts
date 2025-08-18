@@ -1,11 +1,4 @@
 
-export const HERO_BACKGROUNDS = [
-  "https://images.unsplash.com/photo-1507525428034-b723a9ce6890?q=80&w=2070&auto=format&fit=crop", // Beach
-  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop", // Mountains
-  "https://images.unsplash.com/photo-1513407030348-c983a97b98d8?q=80&w=2072&auto=format&fit=crop", // City
-  "https://images.unsplash.com/photo-1542051841857-5f90071e7989?q=80&w=2070&auto=format&fit=crop", // Tokyo
-];
-
 export const DESTINATION_SUGGESTIONS = [
   "Paris, France",
   "Kyoto, Japan",
