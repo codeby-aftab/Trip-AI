@@ -30,6 +30,23 @@ const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [savedTrips, setSavedTrips] = useState<TripPlan[]>([]);
   const [authModal, setAuthModal] = useState<AuthModalView | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    if (view !== 'HOME') {
+      setIsScrolled(false);
+      return;
+    }
+    
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [view]);
 
   useEffect(() => {
     const fetchRates = async () => {
@@ -216,7 +233,7 @@ const App: React.FC = () => {
     <div className="bg-white">
       {error && <ErrorDisplay message={error} />}
        <Header
-        variant={view === 'HOME' ? 'transparent' : 'solid'}
+        variant={view === 'HOME' && !isScrolled ? 'transparent' : 'solid'}
         isLoggedIn={isLoggedIn}
         onLoginClick={() => setAuthModal('LOGIN')}
         onSignupClick={() => setAuthModal('SIGNUP')}
